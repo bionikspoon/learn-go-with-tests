@@ -2,10 +2,42 @@ package main
 
 import "fmt"
 
-func Hello(name string) string {
-	return fmt.Sprintf("Hello, %v!", name)
+func main() {
+	fmt.Println(Hello("World", English))
 }
 
-func main() {
-	fmt.Println(Hello("World"))
+type Language int
+
+const (
+	Spanish Language = iota
+	English
+	French
+)
+
+const englishHello = "Hello"
+const spanishHello = "Hola"
+const frenchHello = "Bonjour"
+
+func Hello(name string, language Language) string {
+	if name == "" {
+		name = "World"
+	}
+
+	return fmt.Sprintf("%v, %v!", prefix(language), name)
+}
+
+func prefix(language Language) string {
+	switch language {
+	case Spanish:
+		return spanishHello
+
+	case English:
+		return englishHello
+
+	case French:
+		return frenchHello
+
+	default:
+		panic("unrecognized language")
+	}
 }
