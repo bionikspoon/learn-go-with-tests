@@ -1,4 +1,4 @@
-package di
+package main
 
 import (
 	"fmt"
@@ -7,10 +7,10 @@ import (
 )
 
 func Greet(writer io.Writer, name string) {
-	fmt.Fprintf(writer, "Hello, %v!", name)
+	fmt.Fprintf(writer, "Hello, %v!\n", name)
 
 }
 
-func Di() {
+func main() {
 	Greet(os.Stdout, "world")
 }
