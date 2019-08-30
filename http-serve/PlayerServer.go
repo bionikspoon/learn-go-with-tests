@@ -5,11 +5,6 @@ import (
 	"net/http"
 )
 
-type PlayerStore interface {
-	GetPlayerScore(name string) int
-	RecordWin(name string)
-}
-
 type PlayerServer struct {
 	store PlayerStore
 }

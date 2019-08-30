@@ -13,7 +13,7 @@ type DatabasePlayerStore struct {
 }
 
 type DatabasePlayer struct {
-	Id      int       `orm:"auto""`
+	Id      int       `orm:"auto"`
 	Name    string    `orm:"unique"`
 	Score   int       `orm:"default(0)"`
 	Created time.Time `orm:"auto_now_add;type(datetime)"`
