@@ -13,8 +13,8 @@ func (server PlayerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	player := r.URL.Path[len("/players/"):]
 
 	switch r.Method {
-	case http.MethodPost:
-		server.create(w, player)
+	case http.MethodPut:
+		server.update(w, player)
 	case http.MethodGet:
 		server.show(w, player)
 	}
@@ -32,7 +32,7 @@ func (server PlayerServer) show(w http.ResponseWriter, player string) {
 	fmt.Fprint(w, score)
 }
 
-func (server PlayerServer) create(w http.ResponseWriter, player string) {
+func (server PlayerServer) update(w http.ResponseWriter, player string) {
 
 	server.store.RecordWin(player)
 	w.WriteHeader(http.StatusAccepted)
