@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type InMemoryPlayerStore struct {
 	scores map[string]int
 }
@@ -16,6 +18,7 @@ func (store *InMemoryPlayerStore) GetLeague() (players Players) {
 	for name, wins := range store.scores {
 		players = append(players, Player{Name: name, Wins: wins})
 	}
+	sort.Sort(ByWins(players))
 	return
 }
 

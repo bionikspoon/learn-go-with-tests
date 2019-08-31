@@ -17,7 +17,7 @@ func (player *Player) TableIndex() [][]string {
 	}
 }
 
-func NewDatabasePlayerStore(debug bool) *DatabasePlayerStore {
+func NewDatabasePlayerStore(debugSync, debug bool) *DatabasePlayerStore {
 	orm.Debug = debug
 	orm.RegisterModel(new(Player))
 
@@ -25,7 +25,7 @@ func NewDatabasePlayerStore(debug bool) *DatabasePlayerStore {
 		log.Printf("could not register database %#v", err)
 	}
 
-	if err := orm.RunSyncdb("default", true, debug); err != nil {
+	if err := orm.RunSyncdb("default", true, debugSync); err != nil {
 		log.Printf("could not init db %#v", err)
 	}
 	o := orm.NewOrm()
@@ -59,7 +59,7 @@ func (store *DatabasePlayerStore) RecordWin(name string) {
 }
 
 func (store *DatabasePlayerStore) GetLeague() (players Players) {
-	if _, err := store.o.QueryTable("player").All(&players); err != nil {
+	if _, err := store.o.QueryTable("player").OrderBy("-wins").All(&players); err != nil {
 		log.Printf("could not get players err %#v", err)
 	}
 	return

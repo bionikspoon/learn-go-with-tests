@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"sort"
 )
 
 type FileSystemPlayerStore struct {
@@ -22,13 +23,12 @@ func NewFileSystemPlayerStore(file *os.File) *FileSystemPlayerStore {
 }
 
 func (store *FileSystemPlayerStore) GetLeague() Players {
+	sort.Sort(ByWins(store.players))
 	return store.players
 }
 
 func (store *FileSystemPlayerStore) GetPlayerScore(name string) int {
-	players := store.GetLeague()
-
-	if player := players.Find(name); player != nil {
+	if player := store.players.Find(name); player != nil {
 		return player.Wins
 	} else {
 		return 0
