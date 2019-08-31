@@ -13,7 +13,7 @@ type Player struct {
 	Wins int    `orm:"default(0)"`
 }
 
-type ByName []Player
+type ByName Players
 
 func (a ByName) Len() int           { return len(a) }
 func (a ByName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -41,7 +41,7 @@ func (server *PlayerServer) leagueHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Set("content-type", "application/json")
 	league := server.store.GetLeague()
 	if err := json.NewEncoder(w).Encode(league); err != nil {
-		log.Printf("err: %#+v\n", err)
+		log.Printf("could not encode players err: %#+v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
 		w.WriteHeader(http.StatusOK)

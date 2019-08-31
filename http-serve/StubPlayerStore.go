@@ -2,7 +2,7 @@ package main
 
 type StubPlayerStore struct {
 	scores     map[string]int
-	league     []Player
+	league     Players
 	calledWith []string
 }
 
@@ -14,6 +14,6 @@ func (store *StubPlayerStore) RecordWin(name string) {
 	store.calledWith = append(store.calledWith, name)
 }
 
-func (store *StubPlayerStore) GetLeague() []Player {
+func (store *StubPlayerStore) GetLeague() Players {
 	return store.league
 }

@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -17,7 +19,7 @@ func TestPlayerServer(t *testing.T) {
 			"Pepper": 20,
 			"Floyd":  10,
 		},
-		[]Player{
+		Players{
 			{1, "Joe Sixpack", 20},
 			{2, "Jane User", 3},
 			{3, "Creed", 3},
@@ -76,8 +78,8 @@ func TestPlayerServer(t *testing.T) {
 		server.ServeHTTP(response, indexScoreRequest())
 
 		assertStatus(t, response, http.StatusOK)
-		assertLeague(t, response, store.league)
 		assertContentType(t, response, "application/json")
+		assertLeague(t, server, store.league)
 
 	})
 }
@@ -90,31 +92,51 @@ func TestRecordingWinsAndShowingThem(t *testing.T) {
 		assertUpdateAndShow(t, server, "Candy", 6)
 		assertUpdateAndShow(t, server, "Anne", 2)
 
-		response := httptest.NewRecorder()
-		server.ServeHTTP(response, indexScoreRequest())
-		assertLeague(t, response, []Player{
+		players := Players{
 			{0, "Pepper", 3},
 			{0, "Candy", 6},
 			{0, "Anne", 2},
-		})
+		}
+		assertLeague(t, server, players)
+		assertLeague(t, server, players)
 
 	})
 
 	t.Run("DatabasePlayerStore", func(t *testing.T) {
-		server := NewPlayerServer(NewDatabasePlayerStore(true))
+		server := NewPlayerServer(NewDatabasePlayerStore(false))
 
 		assertUpdateAndShow(t, server, "Pepper", 3)
 		assertUpdateAndShow(t, server, "Candy", 6)
 		assertUpdateAndShow(t, server, "Anne", 2)
 
-		response := httptest.NewRecorder()
-		server.ServeHTTP(response, indexScoreRequest())
-		assertLeague(t, response, []Player{
+		players := Players{
 			{1, "Pepper", 3},
 			{2, "Candy", 6},
 			{3, "Anne", 2},
-		})
+		}
+		assertLeague(t, server, players)
+		assertLeague(t, server, players)
 	})
+
+	t.Run("FileSystemPlayerStore", func(t *testing.T) {
+		database, cleanup := createTempFile(t, "")
+		defer cleanup()
+
+		server := NewPlayerServer(NewFileSystemPlayerStore(database))
+
+		assertUpdateAndShow(t, server, "Pepper", 3)
+		assertUpdateAndShow(t, server, "Candy", 6)
+		assertUpdateAndShow(t, server, "Anne", 2)
+
+		players := Players{
+			{0, "Pepper", 3},
+			{0, "Candy", 6},
+			{0, "Anne", 2},
+		}
+		assertLeague(t, server, players)
+		// assertLeague(t, server, players)
+	})
+
 }
 
 func assertUpdateAndShow(t *testing.T, server *PlayerServer, player string, count int) {
@@ -147,14 +169,18 @@ func assertResponseBody(t *testing.T, response *httptest.ResponseRecorder, want 
 	}
 }
 
-func assertLeague(t *testing.T, response *httptest.ResponseRecorder, want []Player) {
+func assertLeague(t *testing.T, server *PlayerServer, want Players) {
+
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, indexScoreRequest())
+
 	got := getLeagueFromResponse(t, response)
 
 	sort.Sort(ByName(got))
 	sort.Sort(ByName(want))
 
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("\ngot %v\nwant %v", got, want)
+		t.Errorf("\ngot  %v\nwant %v", got, want)
 	}
 }
 
@@ -177,7 +203,8 @@ func updateScoreRequest(name string) *http.Request {
 	request, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/players/%s", name), nil)
 	return request
 }
-func getLeagueFromResponse(t *testing.T, response *httptest.ResponseRecorder) (league []Player) {
+
+func getLeagueFromResponse(t *testing.T, response *httptest.ResponseRecorder) (league Players) {
 
 	t.Helper()
 
@@ -186,4 +213,25 @@ func getLeagueFromResponse(t *testing.T, response *httptest.ResponseRecorder) (l
 	}
 
 	return
+}
+
+func createTempFile(t *testing.T, initialData string) (*os.File, func()) {
+	t.Helper()
+
+	tmpfile, err := ioutil.TempFile("", "db.json")
+
+	if err != nil {
+		t.Fatalf("could not create temp file %v", err)
+	}
+
+	if _, err = tmpfile.Write([]byte(initialData)); err != nil {
+		t.Fatalf("could not write initial data %v", err)
+	}
+
+	removeFile := func() {
+		tmpfile.Close()
+		os.Remove(tmpfile.Name())
+	}
+
+	return tmpfile, removeFile
 }
