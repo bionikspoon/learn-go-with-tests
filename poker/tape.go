@@ -6,6 +6,10 @@ type tape struct {
 	file *os.File
 }
 
+func NewTape(file *os.File) *tape {
+	return &tape{file}
+}
+
 func (tape tape) Write(bytes []byte) (n int, err error) {
 	if err := tape.file.Truncate(0); err != nil {
 		return 0, err

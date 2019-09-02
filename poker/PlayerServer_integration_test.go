@@ -1,58 +1,62 @@
-package poker
+package poker_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/bionikspoon/learn-go-with-tests/poker"
+)
 
 func TestRecordingWinsAndShowingThem(t *testing.T) {
 	t.Run("InMemoryPlayerStore", func(t *testing.T) {
-		server := NewPlayerServer(NewInMemoryPlayerStore())
+		server := poker.NewPlayerServer(poker.NewInMemoryPlayerStore())
 
-		assertUpdateAndShow(t, server, "Pepper", 3)
-		assertUpdateAndShow(t, server, "Candy", 6)
-		assertUpdateAndShow(t, server, "Anne", 2)
+		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
+		poker.AssertUpdateAndShow(t, server, "Candy", 6)
+		poker.AssertUpdateAndShow(t, server, "Anne", 2)
 
-		players := Players{
+		players := poker.Players{
 			{0, "Candy", 6},
 			{0, "Pepper", 3},
 			{0, "Anne", 2},
 		}
-		assertLeague(t, server, players)
-		assertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
 
 	})
 
 	t.Run("DatabasePlayerStore", func(t *testing.T) {
-		server := NewPlayerServer(NewDatabasePlayerStore(false, true))
+		server := poker.NewPlayerServer(poker.NewDatabasePlayerStore(false, true))
 
-		assertUpdateAndShow(t, server, "Pepper", 3)
-		assertUpdateAndShow(t, server, "Candy", 6)
-		assertUpdateAndShow(t, server, "Anne", 2)
+		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
+		poker.AssertUpdateAndShow(t, server, "Candy", 6)
+		poker.AssertUpdateAndShow(t, server, "Anne", 2)
 
-		players := Players{
+		players := poker.Players{
 			{2, "Candy", 6},
 			{1, "Pepper", 3},
 			{3, "Anne", 2},
 		}
-		assertLeague(t, server, players)
-		assertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
 	})
 
 	t.Run("FileSystemPlayerStore", func(t *testing.T) {
-		database, cleanup := createTempFile(t, "")
+		database, cleanup := poker.CreateTempFile(t, "")
 		defer cleanup()
 
-		server := NewPlayerServer(NewFileSystemPlayerStore(database))
+		server := poker.NewPlayerServer(poker.NewFileSystemPlayerStore(database))
 
-		assertUpdateAndShow(t, server, "Pepper", 3)
-		assertUpdateAndShow(t, server, "Candy", 6)
-		assertUpdateAndShow(t, server, "Anne", 2)
+		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
+		poker.AssertUpdateAndShow(t, server, "Candy", 6)
+		poker.AssertUpdateAndShow(t, server, "Anne", 2)
 
-		players := Players{
+		players := poker.Players{
 			{0, "Candy", 6},
 			{0, "Pepper", 3},
 			{0, "Anne", 2},
 		}
-		assertLeague(t, server, players)
-		assertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
+		poker.AssertLeague(t, server, players)
 	})
 
 }

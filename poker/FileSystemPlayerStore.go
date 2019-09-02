@@ -18,7 +18,7 @@ func NewFileSystemPlayerStore(file *os.File) *FileSystemPlayerStore {
 	if err := json.NewDecoder(file).Decode(&players); err != nil {
 		players = Players{}
 	}
-	database := json.NewEncoder(&tape{file})
+	database := json.NewEncoder(NewTape(file))
 	return &FileSystemPlayerStore{database, players}
 }
 
