@@ -2,6 +2,7 @@ package poker
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -20,6 +21,22 @@ func NewFileSystemPlayerStore(file *os.File) *FileSystemPlayerStore {
 	}
 	database := json.NewEncoder(NewTape(file))
 	return &FileSystemPlayerStore{database, players}
+}
+
+func NewFileSystemPlayerStoreFromFileName(fileName string) (*FileSystemPlayerStore, func(), error) {
+	handle, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, nil, fmt.Errorf("problem opening %s %v", fileName, err)
+	}
+
+	closeFunc := func() {
+		handle.Close()
+	}
+
+	store := NewFileSystemPlayerStore(handle)
+
+	return store, closeFunc, nil
+
 }
 
 func (store *FileSystemPlayerStore) GetLeague() Players {
