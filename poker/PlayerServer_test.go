@@ -14,21 +14,16 @@ import (
 
 func TestPlayerServer(t *testing.T) {
 	store := &StubPlayerStore{
-		map[string]int{
-			"Pepper": 20,
-			"Floyd":  10,
-		},
-		Players{
+		players: Players{
 			{1, "Joe Sixpack", 20},
 			{2, "Jane User", 4},
 			{3, "Creed", 3},
 		},
-		nil,
 	}
 	server := NewPlayerServer(store)
 
-	t.Run("show Pepper's score", func(t *testing.T) {
-		request := showScoreRequest("Pepper")
+	t.Run("show Joe Sixpack's score", func(t *testing.T) {
+		request := showScoreRequest("Joe Sixpack")
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -38,15 +33,24 @@ func TestPlayerServer(t *testing.T) {
 
 	})
 
-	t.Run("show Floyd's score", func(t *testing.T) {
-		request := showScoreRequest("Floyd")
+	t.Run("show Jane User's score", func(t *testing.T) {
+		request := showScoreRequest("Jane User")
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
 
 		assertStatus(t, response, http.StatusOK)
-		assertResponseBody(t, response, "10")
+		assertResponseBody(t, response, "4")
+	})
 
+	t.Run("show unknown users score", func(t *testing.T) {
+		request := showScoreRequest("Floyd")
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response, http.StatusNotFound)
+		assertResponseBody(t, response, "0")
 	})
 
 	t.Run("it returns a 404 on missing players", func(t *testing.T) {
@@ -59,14 +63,20 @@ func TestPlayerServer(t *testing.T) {
 	})
 
 	t.Run("it records wins on update", func(t *testing.T) {
-		player := "Apollo"
-
 		response := httptest.NewRecorder()
-		server.ServeHTTP(response, updateScoreRequest(player))
+		server.ServeHTTP(response, updateScoreRequest("Apollo"))
 
 		assertStatus(t, response, http.StatusAccepted)
 
-		if want := []string{player}; !reflect.DeepEqual(store.calledWith, want) {
+		want := []string{
+			"GetPlayerScore Joe Sixpack",
+			"GetPlayerScore Jane User",
+			"GetPlayerScore Floyd",
+			"GetPlayerScore Apollo",
+			"RecordWin Apollo",
+		}
+
+		if !reflect.DeepEqual(store.calledWith, want) {
 			t.Errorf("got %#v want %#v", store.calledWith, want)
 		}
 
@@ -78,7 +88,7 @@ func TestPlayerServer(t *testing.T) {
 
 		assertStatus(t, response, http.StatusOK)
 		assertContentType(t, response, "application/json")
-		assertLeague(t, server, store.league)
+		assertLeague(t, server, store.players)
 	})
 }
 

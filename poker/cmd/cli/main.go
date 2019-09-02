@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/bionikspoon/learn-go-with-tests/poker"
@@ -11,14 +11,17 @@ import (
 const dbFileName = "game.db.json"
 
 func main() {
+	fmt.Println("Let's play poker")
+	fmt.Println("Type {Name} wins to record a win")
+
 	database, err := os.OpenFile(dbFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Fatalf("could not open file err: %#+v\n", err)
 	}
 
-	server := poker.NewPlayerServer(poker.NewFileSystemPlayerStore(database))
+	store := poker.NewFileSystemPlayerStore(database)
 
-	if err := http.ListenAndServe(":5000", server); err != nil {
-		log.Fatalf("Could not listen on port 5000 %v", err)
-	}
+	game := poker.NewCLI(store, os.Stdin)
+	game.PlayPoker()
+
 }
