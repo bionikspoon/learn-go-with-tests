@@ -6,41 +6,17 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const PlayerPrompt = "Please enter number of players: "
 
-type Game struct {
-	alerter BlindAlerter
-	store   PlayerStore
-}
-
-func NewGame(alerter BlindAlerter, store PlayerStore) *Game {
-	return &Game{alerter: alerter, store: store}
-}
-
-func (game *Game) Start(numberOfPlayers int) {
-	blindIncrement := time.Duration(5+numberOfPlayers) * time.Minute
-	blinds := []int{100, 200, 300, 400, 500, 600, 800, 1000, 2000, 4000, 8000}
-	blindTime := 0 * time.Minute
-	for _, blind := range blinds {
-		game.alerter.ScheduleAlertAt(blindTime, blind)
-		blindTime += blindIncrement
-	}
-}
-
-func (game Game) Finish(winner string) {
-	game.store.RecordWin(winner)
-}
-
 type CLI struct {
 	in   *bufio.Scanner
 	out  io.Writer
-	game *Game
+	game Game
 }
 
-func NewCLI(in io.Reader, out io.Writer, game *Game) *CLI {
+func NewCLI(in io.Reader, out io.Writer, game Game) *CLI {
 	return &CLI{
 		in:   bufio.NewScanner(in),
 		out:  out,
@@ -50,7 +26,12 @@ func NewCLI(in io.Reader, out io.Writer, game *Game) *CLI {
 
 func (cli *CLI) PlayPoker() {
 	fmt.Fprintf(cli.out, PlayerPrompt)
-	numberOfPlayers, _ := strconv.Atoi(cli.readline())
+	input := cli.readline()
+	numberOfPlayers, err := strconv.Atoi(input)
+	if err != nil {
+		fmt.Fprintf(cli.out, "%s is not a number", input)
+		return
+	}
 
 	cli.game.Start(numberOfPlayers)
 
