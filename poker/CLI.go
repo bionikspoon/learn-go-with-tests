@@ -16,6 +16,10 @@ type Game struct {
 	store   PlayerStore
 }
 
+func NewGame(alerter BlindAlerter, store PlayerStore) *Game {
+	return &Game{alerter: alerter, store: store}
+}
+
 func (game *Game) Start(numberOfPlayers int) {
 	blindIncrement := time.Duration(5+numberOfPlayers) * time.Minute
 	blinds := []int{100, 200, 300, 400, 500, 600, 800, 1000, 2000, 4000, 8000}
@@ -36,14 +40,11 @@ type CLI struct {
 	game *Game
 }
 
-func NewCLI(store PlayerStore, in io.Reader, out io.Writer, alerter BlindAlerter) *CLI {
+func NewCLI(in io.Reader, out io.Writer, game *Game) *CLI {
 	return &CLI{
-		in:  bufio.NewScanner(in),
-		out: out,
-		game: &Game{
-			store:   store,
-			alerter: alerter,
-		},
+		in:   bufio.NewScanner(in),
+		out:  out,
+		game: game,
 	}
 }
 

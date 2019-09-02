@@ -19,9 +19,9 @@ func TestCLI(t *testing.T) {
 	t.Run("records Julia's win", func(t *testing.T) {
 		in := strings.NewReader("5\nJulia wins\n")
 		out := &bytes.Buffer{}
-		blindAlerter := &SpyBlindAlerter{}
+		game := poker.NewGame(&SpyBlindAlerter{}, store)
 
-		cli := poker.NewCLI(store, in, out, blindAlerter)
+		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
 
 		want := []string{"RecordWin Julia"}
@@ -33,9 +33,9 @@ func TestCLI(t *testing.T) {
 	t.Run("records Roger's win", func(t *testing.T) {
 		in := strings.NewReader("5\nRoger wins\n")
 		out := &bytes.Buffer{}
-		blindAlerter := &SpyBlindAlerter{}
+		game := poker.NewGame(&SpyBlindAlerter{}, store)
 
-		cli := poker.NewCLI(store, in, out, blindAlerter)
+		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
 
 		want := []string{"RecordWin Julia", "RecordWin Roger"}
@@ -49,8 +49,9 @@ func TestCLI(t *testing.T) {
 		in := strings.NewReader("5\n")
 		out := &bytes.Buffer{}
 		blindAlerter := &SpyBlindAlerter{}
+		game := poker.NewGame(blindAlerter, store)
 
-		cli := poker.NewCLI(store, in, out, blindAlerter)
+		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
 
 		cases := []scheduledAlert{
@@ -82,8 +83,9 @@ func TestCLI(t *testing.T) {
 		in := strings.NewReader("7\n")
 		out := &bytes.Buffer{}
 		blindAlerter := &SpyBlindAlerter{}
+		game := poker.NewGame(blindAlerter, store)
 
-		cli := poker.NewCLI(store, in, out, blindAlerter)
+		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
 
 		got := out.String()
