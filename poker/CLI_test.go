@@ -1,6 +1,7 @@
 package poker_test
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"strings"
@@ -16,10 +17,11 @@ func TestCLI(t *testing.T) {
 	}
 
 	t.Run("records Julia's win", func(t *testing.T) {
-		in := strings.NewReader("Julia wins\n")
+		in := strings.NewReader("5\nJulia wins\n")
+		out := &bytes.Buffer{}
 		blindAlerter := &SpyBlindAlerter{}
 
-		cli := poker.NewCLI(store, in, blindAlerter)
+		cli := poker.NewCLI(store, in, out, blindAlerter)
 		cli.PlayPoker()
 
 		want := []string{"RecordWin Julia"}
@@ -29,10 +31,11 @@ func TestCLI(t *testing.T) {
 	})
 
 	t.Run("records Roger's win", func(t *testing.T) {
-		in := strings.NewReader("Roger wins\n")
+		in := strings.NewReader("5\nRoger wins\n")
+		out := &bytes.Buffer{}
 		blindAlerter := &SpyBlindAlerter{}
 
-		cli := poker.NewCLI(store, in, blindAlerter)
+		cli := poker.NewCLI(store, in, out, blindAlerter)
 		cli.PlayPoker()
 
 		want := []string{"RecordWin Julia", "RecordWin Roger"}
@@ -43,10 +46,11 @@ func TestCLI(t *testing.T) {
 	})
 
 	t.Run("it schedules printing of blind values", func(t *testing.T) {
-		in := strings.NewReader("Roger wins\n")
+		in := strings.NewReader("5\n")
+		out := &bytes.Buffer{}
 		blindAlerter := &SpyBlindAlerter{}
 
-		cli := poker.NewCLI(store, in, blindAlerter)
+		cli := poker.NewCLI(store, in, out, blindAlerter)
 		cli.PlayPoker()
 
 		cases := []scheduledAlert{
@@ -72,7 +76,38 @@ func TestCLI(t *testing.T) {
 				assertScheduleAlert(t, alert, want)
 			})
 		}
+	})
 
+	t.Run("it prompts the user to enter the number of players", func(t *testing.T) {
+		in := strings.NewReader("7\n")
+		out := &bytes.Buffer{}
+		blindAlerter := &SpyBlindAlerter{}
+
+		cli := poker.NewCLI(store, in, out, blindAlerter)
+		cli.PlayPoker()
+
+		got := out.String()
+
+		if got != poker.PlayerPrompt {
+			t.Errorf("got %q want %q", got, poker.PlayerPrompt)
+		}
+
+		cases := []scheduledAlert{
+			{0 * time.Minute, 100},
+			{12 * time.Minute, 200},
+			{24 * time.Minute, 300},
+			{36 * time.Minute, 400},
+		}
+
+		for i, want := range cases {
+			t.Run(fmt.Sprint(want), func(t *testing.T) {
+				if len(blindAlerter.alerts) <= i {
+					t.Fatalf("alert %d was not scheduled %v", i, blindAlerter.alerts)
+				}
+				alert := blindAlerter.alerts[i]
+				assertScheduleAlert(t, alert, want)
+			})
+		}
 	})
 }
 
