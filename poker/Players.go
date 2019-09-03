@@ -1,5 +1,11 @@
 package poker
 
+type Player struct {
+	Id   int    `orm:"auto"`
+	Name string `orm:"unique"`
+	Wins int    `orm:"default(0)"`
+}
+
 type Players []Player
 
 func (players Players) Find(name string) *Player {

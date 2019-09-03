@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -91,17 +92,20 @@ func AssertContentType(t *testing.T, response *httptest.ResponseRecorder, want s
 }
 
 func FetchIndexScoreRequest() *http.Request {
-	request, _ := http.NewRequest(http.MethodGet, "/league", nil)
-	return request
+	return httptest.NewRequest(http.MethodGet, "/league", nil)
 }
+
 func FetchShowScoreRequest(name string) *http.Request {
-	request, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/players/%s", name), nil)
-	return request
+
+	return httptest.NewRequest(http.MethodGet, fmt.Sprintf("/players/%s", url.PathEscape(name)), nil)
 }
 
 func FetchUpdateScoreRequest(name string) *http.Request {
-	request, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/players/%s", name), nil)
-	return request
+	return httptest.NewRequest(http.MethodPut, fmt.Sprintf("/players/%s", url.PathEscape(name)), nil)
+}
+
+func FetchGameRequest() *http.Request {
+	return httptest.NewRequest(http.MethodGet, "/game", nil)
 }
 
 func DecodePlayersFromResponse(t *testing.T, response *httptest.ResponseRecorder) (players Players) {

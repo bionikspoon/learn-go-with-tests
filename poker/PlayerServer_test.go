@@ -88,3 +88,15 @@ func TestPlayerServer(t *testing.T) {
 		poker.AssertLeague(t, server, store.Players)
 	})
 }
+
+func TestGame(t *testing.T) {
+	t.Run("GET /game returns 200", func(t *testing.T) {
+		server := poker.NewPlayerServer(&poker.StubPlayerStore{})
+
+		request := poker.FetchGameRequest()
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, request)
+
+		poker.AssertStatus(t, response, http.StatusOK)
+	})
+}

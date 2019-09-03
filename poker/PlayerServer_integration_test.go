@@ -25,7 +25,7 @@ func TestRecordingWinsAndShowingThem(t *testing.T) {
 	})
 
 	t.Run("DatabasePlayerStore", func(t *testing.T) {
-		server := poker.NewPlayerServer(poker.NewDatabasePlayerStore(false, true))
+		server := poker.NewPlayerServer(poker.NewDatabasePlayerStore(false, false))
 
 		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
 		poker.AssertUpdateAndShow(t, server, "Candy", 6)

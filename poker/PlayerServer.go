@@ -7,12 +7,6 @@ import (
 	"net/http"
 )
 
-type Player struct {
-	Id   int    `orm:"auto"`
-	Name string `orm:"unique"`
-	Wins int    `orm:"default(0)"`
-}
-
 type PlayerServer struct {
 	store PlayerStore
 	http.Handler
@@ -26,6 +20,7 @@ func NewPlayerServer(store PlayerStore) *PlayerServer {
 
 	router.Handle("/league", http.HandlerFunc(server.leagueHandler))
 	router.Handle("/players/", http.HandlerFunc(server.playerHandler))
+	router.Handle("/game", http.HandlerFunc(server.game))
 
 	server.Handler = router
 	return server
@@ -51,6 +46,10 @@ func (server *PlayerServer) playerHandler(w http.ResponseWriter, r *http.Request
 	case http.MethodGet:
 		server.show(w, player)
 	}
+}
+
+func (server *PlayerServer) game(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func (server *PlayerServer) show(w http.ResponseWriter, player string) {
