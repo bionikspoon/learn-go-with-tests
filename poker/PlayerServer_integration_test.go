@@ -8,7 +8,7 @@ import (
 
 func TestRecordingWinsAndShowingThem(t *testing.T) {
 	t.Run("InMemoryPlayerStore", func(t *testing.T) {
-		server := poker.NewPlayerServer(poker.NewInMemoryPlayerStore())
+		server := poker.EnsurePlayerServer(t, poker.NewInMemoryPlayerStore())
 
 		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
 		poker.AssertUpdateAndShow(t, server, "Candy", 6)
@@ -25,7 +25,7 @@ func TestRecordingWinsAndShowingThem(t *testing.T) {
 	})
 
 	t.Run("DatabasePlayerStore", func(t *testing.T) {
-		server := poker.NewPlayerServer(poker.NewDatabasePlayerStore(false, false))
+		server := poker.EnsurePlayerServer(t, poker.NewDatabasePlayerStore(false, false))
 
 		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
 		poker.AssertUpdateAndShow(t, server, "Candy", 6)
@@ -44,7 +44,7 @@ func TestRecordingWinsAndShowingThem(t *testing.T) {
 		database, cleanup := poker.CreateTempFile(t, "")
 		defer cleanup()
 
-		server := poker.NewPlayerServer(poker.NewFileSystemPlayerStore(database))
+		server := poker.EnsurePlayerServer(t, poker.NewFileSystemPlayerStore(database))
 
 		poker.AssertUpdateAndShow(t, server, "Pepper", 3)
 		poker.AssertUpdateAndShow(t, server, "Candy", 6)

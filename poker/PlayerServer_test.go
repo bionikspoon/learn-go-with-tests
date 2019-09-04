@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bionikspoon/learn-go-with-tests/poker"
-	"github.com/gorilla/websocket"
 )
 
 func TestPlayerServer(t *testing.T) {
@@ -20,7 +19,7 @@ func TestPlayerServer(t *testing.T) {
 			{3, "Creed", 3},
 		},
 	}
-	server := poker.NewPlayerServer(store)
+	server := poker.EnsurePlayerServer(t, store)
 
 	t.Run("show Joe Sixpack's score", func(t *testing.T) {
 		request := poker.FetchShowScoreRequest("Joe Sixpack")
@@ -94,7 +93,7 @@ func TestPlayerServer(t *testing.T) {
 
 func TestGame(t *testing.T) {
 	t.Run("GET /game returns 200", func(t *testing.T) {
-		server := poker.NewPlayerServer(&poker.StubPlayerStore{})
+		server := poker.EnsurePlayerServer(t, &poker.StubPlayerStore{})
 
 		request := poker.FetchGameRequest()
 		response := httptest.NewRecorder()
@@ -106,24 +105,17 @@ func TestGame(t *testing.T) {
 	t.Run("WS /ws it receives the winner of the game", func(t *testing.T) {
 		winner := "Ruth"
 		store := &poker.StubPlayerStore{}
-		server := httptest.NewServer(poker.NewPlayerServer(store))
+		server := httptest.NewServer(poker.EnsurePlayerServer(t, store))
 		defer server.Close()
 
 		wsUrl := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
 
-		ws, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
-		if err != nil {
-			t.Fatalf("could not open websocket server on %s %v", wsUrl, err)
-		}
+		ws := poker.EnsureWSDial(t, wsUrl)
 		defer ws.Close()
 
-		if err := ws.WriteMessage(websocket.TextMessage, []byte(winner)); err != nil {
-			t.Fatalf("could not send message over ws connection %v", err)
-		}
+		poker.EnsureWSWriteMessage(t, ws, winner)
 
-		want := []string{
-			"RecordWin Ruth",
-		}
+		want := []string{"RecordWin Ruth"}
 		time.Sleep(10 * time.Millisecond)
 
 		if !reflect.DeepEqual(store.CalledWith, want) {

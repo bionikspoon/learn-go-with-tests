@@ -12,13 +12,18 @@ import (
 )
 
 type PlayerServer struct {
-	store PlayerStore
+	store    PlayerStore
+	template *template.Template
 	http.Handler
 }
 
-func NewPlayerServer(store PlayerStore) *PlayerServer {
+func NewPlayerServer(store PlayerStore) (*PlayerServer, error) {
 	server := new(PlayerServer)
-	server.store = store
+
+	templ, err := template.ParseFiles(RelativePath("game.html"))
+	if err != nil {
+		return nil, fmt.Errorf("problem loading template %v", err)
+	}
 
 	router := http.NewServeMux()
 
@@ -27,8 +32,10 @@ func NewPlayerServer(store PlayerStore) *PlayerServer {
 	router.Handle("/game", http.HandlerFunc(server.game))
 	router.Handle("/ws", http.HandlerFunc(server.websocket))
 
+	server.store = store
+	server.template = templ
 	server.Handler = router
-	return server
+	return server, nil
 }
 
 func (server *PlayerServer) leagueHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,16 +61,9 @@ func (server *PlayerServer) playerHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (server *PlayerServer) game(w http.ResponseWriter, r *http.Request) {
+	locals := struct{ Year int }{time.Now().Year()}
 
-	templ, err := template.ParseFiles(RelativePath("game.html"))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("problem loading template %s", err.Error()), http.StatusInternalServerError)
-		return
-	}
-	err = templ.Execute(w, struct {
-		Year int
-	}{time.Now().Year()})
-	if err != nil {
+	if err := server.template.Execute(w, locals); err != nil {
 		http.Error(w, fmt.Sprintf("problem rendering template %s", err.Error()), http.StatusInternalServerError)
 	}
 }

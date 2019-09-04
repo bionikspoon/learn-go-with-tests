@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/gorilla/websocket"
 )
 
 type StubPlayerStore struct {
@@ -137,4 +139,34 @@ func CreateTempFile(t *testing.T, initialData string) (*os.File, func()) {
 	}
 
 	return tmpfile, removeFile
+}
+
+func EnsurePlayerServer(t *testing.T, store PlayerStore) *PlayerServer {
+	t.Helper()
+
+	server, err := NewPlayerServer(store)
+	if err != nil {
+		t.Fatalf("could not ensure player server %v", err)
+	}
+
+	return server
+}
+
+func EnsureWSDial(t *testing.T, url string) *websocket.Conn {
+	t.Helper()
+
+	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		t.Fatalf("could not open websocket server on %s %v", url, err)
+	}
+
+	return ws
+}
+
+func EnsureWSWriteMessage(t *testing.T, ws *websocket.Conn, message string) {
+	t.Helper()
+
+	if err := ws.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+		t.Fatalf("could not send message over ws connection %v", err)
+	}
 }

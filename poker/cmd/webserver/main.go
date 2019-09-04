@@ -13,13 +13,18 @@ func main() {
 	filepath := poker.RelativePath("../../", dbFileName)
 	store, close, err := poker.NewFileSystemPlayerStoreFromFileName(filepath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("could not create store %v", err)
+		return
 	}
 	defer close()
 
-	server := poker.NewPlayerServer(store)
+	server, err := poker.NewPlayerServer(store)
+	if err != nil {
+		log.Fatalf("could not create server %v", err)
+		return
+	}
 
-	if err = http.ListenAndServe(":5000", server); err != nil {
+	if err := http.ListenAndServe(":5000", server); err != nil {
 		log.Fatalf("Could not listen on port 5000 %v", err)
 	}
 }

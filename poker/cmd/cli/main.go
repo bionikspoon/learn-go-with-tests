@@ -14,7 +14,8 @@ func main() {
 	filepath := poker.RelativePath("../../", dbFileName)
 	store, close, err := poker.NewFileSystemPlayerStoreFromFileName(filepath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("could not create store %v", err)
+		return
 	}
 	defer close()
 
