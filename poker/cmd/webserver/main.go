@@ -10,7 +10,8 @@ import (
 const dbFileName = "game.db.json"
 
 func main() {
-	store, close, err := poker.NewFileSystemPlayerStoreFromFileName(dbFileName)
+	filepath := poker.RelativePath("../../", dbFileName)
+	store, close, err := poker.NewFileSystemPlayerStoreFromFileName(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}

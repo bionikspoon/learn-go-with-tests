@@ -4,9 +4,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bionikspoon/learn-go-with-tests/poker"
+	"github.com/gorilla/websocket"
 )
 
 func TestPlayerServer(t *testing.T) {
@@ -98,5 +101,34 @@ func TestGame(t *testing.T) {
 		server.ServeHTTP(response, request)
 
 		poker.AssertStatus(t, response, http.StatusOK)
+	})
+
+	t.Run("WS /ws it receives the winner of the game", func(t *testing.T) {
+		winner := "Ruth"
+		store := &poker.StubPlayerStore{}
+		server := httptest.NewServer(poker.NewPlayerServer(store))
+		defer server.Close()
+
+		wsUrl := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
+
+		ws, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
+		if err != nil {
+			t.Fatalf("could not open websocket server on %s %v", wsUrl, err)
+		}
+		defer ws.Close()
+
+		if err := ws.WriteMessage(websocket.TextMessage, []byte(winner)); err != nil {
+			t.Fatalf("could not send message over ws connection %v", err)
+		}
+
+		want := []string{
+			"RecordWin Ruth",
+		}
+		time.Sleep(10 * time.Millisecond)
+
+		if !reflect.DeepEqual(store.CalledWith, want) {
+			t.Errorf("got %#v want %#v", store.CalledWith, want)
+		}
+
 	})
 }
