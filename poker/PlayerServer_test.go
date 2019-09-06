@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/bionikspoon/learn-go-with-tests/poker"
 )
 
@@ -85,8 +87,8 @@ func TestPlayerServer(t *testing.T) {
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, poker.FetchIndexScoreRequest())
 
+		assertContentType(t, response, "application/json")
 		poker.AssertStatus(t, response, http.StatusOK)
-		poker.AssertContentType(t, response, "application/json")
 		poker.AssertLeague(t, server, store.Players)
 	})
 }
@@ -103,31 +105,117 @@ func TestGame(t *testing.T) {
 	})
 
 	t.Run("it prompts the user to enter number of players and starts the game", func(t *testing.T) {
+		wantedBlindAlert := "Blind is 100"
 		winner := "Ruth"
 
-		game := &poker.SpyGame{}
-		store := &poker.StubPlayerStore{}
-		playerServer := poker.EnsurePlayerServer(t, store, game)
-		server := httptest.NewServer(playerServer)
+		game := &poker.SpyGame{BlindAlert: []byte(wantedBlindAlert)}
+		server := httptest.NewServer(poker.EnsurePlayerServer(t, &poker.StubPlayerStore{}, game))
+		ws := ensureWSDial(t, "ws"+strings.TrimPrefix(server.URL, "http")+"/ws")
 
 		defer server.Close()
-
-		wsUrl := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
-
-		ws := poker.EnsureWSDial(t, wsUrl)
 		defer ws.Close()
 
-		poker.EnsureWSWriteMessage(t, ws, "3")
-		poker.EnsureWSWriteMessage(t, ws, winner)
+		ensureWSWriteMessage(t, ws, "3")
+		ensureWSWriteMessage(t, ws, winner)
 
-		time.Sleep(20 * time.Millisecond)
+		assertGameStartedWith(t, game, 3)
+		assertGameFinishedWith(t, game, winner)
 
-		if got := game.StartedWith; got != 3 {
-			t.Errorf("got %d want %d", got, 3)
-		}
+		within(t, 10*time.Millisecond, func() {
+			assertBlindAlert(t, ws, wantedBlindAlert)
+		})
 
-		if got := game.FinishedWith; got != winner {
-			t.Errorf("got %q want %q", got, winner)
-		}
 	})
+}
+
+func assertContentType(t *testing.T, response *httptest.ResponseRecorder, want string) {
+	t.Helper()
+
+	if got := response.Result().Header.Get("content-type"); got != want {
+		t.Errorf("got %q want %q", got, want)
+	}
+}
+
+func assertGameStartedWith(t *testing.T, game *poker.SpyGame, want int) {
+	t.Helper()
+
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return game.StartedWith == want
+	})
+
+	if !passed {
+		t.Errorf("got %q want %q", game.StartedWith, want)
+	}
+}
+
+func assertGameFinishedWith(t *testing.T, game *poker.SpyGame, want string) {
+	t.Helper()
+
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return game.FinishedWith == want
+	})
+
+	if !passed {
+		t.Errorf("got %q want %q", game.FinishedWith, want)
+	}
+}
+
+func assertBlindAlert(t *testing.T, ws *websocket.Conn, want string) {
+	t.Helper()
+	_, message, err := ws.ReadMessage()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if got := string(message); got != want {
+		t.Errorf("got %q want %q", got, want)
+	}
+}
+
+func within(t *testing.T, duration time.Duration, assert func()) {
+	t.Helper()
+
+	done := make(chan struct{}, 1)
+
+	go func() {
+		assert()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(duration):
+		t.Error("timed out")
+	case <-done:
+	}
+}
+
+func retryUntil(duration time.Duration, fn func() bool) bool {
+	deadline := time.Now().Add(duration)
+
+	for time.Now().Before(deadline) {
+		if fn() {
+			return true
+		}
+	}
+	return false
+}
+
+func ensureWSDial(t *testing.T, url string) *websocket.Conn {
+	t.Helper()
+
+	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		t.Fatalf("could not open websocket server on %s %v", url, err)
+	}
+
+	return ws
+}
+
+func ensureWSWriteMessage(t *testing.T, ws *websocket.Conn, message string) {
+	t.Helper()
+
+	if err := ws.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+		t.Fatalf("could not send message over ws connection %v", err)
+	}
 }
