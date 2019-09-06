@@ -13,7 +13,7 @@ func TestCLI(t *testing.T) {
 	t.Run("it prompts the user to enter number of players and starts the game", func(t *testing.T) {
 		in := strings.NewReader("5\nJulia wins\n")
 		out := &bytes.Buffer{}
-		game := &SpyGame{}
+		game := &poker.SpyGame{}
 
 		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
@@ -34,7 +34,7 @@ func TestCLI(t *testing.T) {
 	t.Run("given a non numerical value it prints an error and does not start the game", func(t *testing.T) {
 		in := strings.NewReader("hello\n")
 		out := &bytes.Buffer{}
-		game := &SpyGame{}
+		game := &poker.SpyGame{}
 
 		cli := poker.NewCLI(in, out, game)
 		cli.PlayPoker()
@@ -48,18 +48,4 @@ func TestCLI(t *testing.T) {
 			t.Errorf("got %q want %q", got, want)
 		}
 	})
-}
-
-type SpyGame struct {
-	StartedWith  int
-	StartCalled  bool
-	FinishedWith string
-}
-
-func (game *SpyGame) Start(startedWith int) {
-	game.StartedWith = startedWith
-	game.StartCalled = true
-}
-func (game *SpyGame) Finish(finishedWith string) {
-	game.FinishedWith = finishedWith
 }

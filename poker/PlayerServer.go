@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -14,10 +15,11 @@ import (
 type PlayerServer struct {
 	store    PlayerStore
 	template *template.Template
+	game     Game
 	http.Handler
 }
 
-func NewPlayerServer(store PlayerStore) (*PlayerServer, error) {
+func NewPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
 	server := new(PlayerServer)
 
 	templ, err := template.ParseFiles(RelativePath("game.html"))
@@ -29,12 +31,13 @@ func NewPlayerServer(store PlayerStore) (*PlayerServer, error) {
 
 	router.Handle("/league", http.HandlerFunc(server.leagueHandler))
 	router.Handle("/players/", http.HandlerFunc(server.playerHandler))
-	router.Handle("/game", http.HandlerFunc(server.game))
+	router.Handle("/game", http.HandlerFunc(server.gameHandler))
 	router.Handle("/ws", http.HandlerFunc(server.websocket))
 
 	server.store = store
 	server.template = templ
 	server.Handler = router
+	server.game = game
 	return server, nil
 }
 
@@ -60,7 +63,7 @@ func (server *PlayerServer) playerHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (server *PlayerServer) game(w http.ResponseWriter, r *http.Request) {
+func (server *PlayerServer) gameHandler(w http.ResponseWriter, r *http.Request) {
 	locals := struct{ Year int }{time.Now().Year()}
 
 	if err := server.template.Execute(w, locals); err != nil {
@@ -69,21 +72,18 @@ func (server *PlayerServer) game(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *PlayerServer) websocket(w http.ResponseWriter, r *http.Request) {
+	ws := newPlayerServerWS(w, r)
 
-	upgrader := websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
-	ws, err := upgrader.Upgrade(w, r, nil)
+	numberOfPlayersMessage := ws.WaitForMsg()
+	numberOfPlayers, err := strconv.Atoi(numberOfPlayersMessage)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("semething went wrong %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("could not convert %q to number %v", numberOfPlayersMessage, err), http.StatusInternalServerError)
 		return
 	}
+	server.game.Start(numberOfPlayers, ws)
 
-	_, message, err := ws.ReadMessage()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("could not read ws message %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	server.store.RecordWin(string(message))
+	winner := ws.WaitForMsg()
+	server.game.Finish(winner)
 
 }
 
@@ -101,4 +101,36 @@ func (server *PlayerServer) update(w http.ResponseWriter, player string) {
 
 	server.store.RecordWin(player)
 	w.WriteHeader(http.StatusAccepted)
+}
+
+type playerServerWS struct {
+	*websocket.Conn
+}
+
+func newPlayerServerWS(w http.ResponseWriter, r *http.Request) *playerServerWS {
+	upgrader := websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("semething went wrong %v", err), http.StatusInternalServerError)
+		return nil
+	}
+
+	return &playerServerWS{ws}
+
+}
+func (ws *playerServerWS) WaitForMsg() string {
+	_, message, err := ws.ReadMessage()
+	if err != nil {
+		log.Printf("error reading from websocket %v\n", err)
+	}
+	return string(message)
+}
+
+func (ws *playerServerWS) Write(bytes []byte) (int, error) {
+	if err := ws.WriteMessage(1, bytes); err != nil {
+		return 0, err
+	}
+	return len(bytes), nil
+
 }

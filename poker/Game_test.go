@@ -2,6 +2,8 @@ package poker_test
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -17,7 +19,7 @@ func TestGame_Start(t *testing.T) {
 	t.Run("it schedules alerts given 5 players", func(t *testing.T) {
 		blindAlerter := &SpyBlindAlerter{}
 		game := poker.NewTexasHoldem(blindAlerter, store)
-		game.Start(5)
+		game.Start(5, ioutil.Discard)
 
 		cases := []scheduledAlert{
 			{0 * time.Minute, 100},
@@ -39,7 +41,7 @@ func TestGame_Start(t *testing.T) {
 	t.Run("it schedules alerts given 7 players", func(t *testing.T) {
 		blindAlerter := &SpyBlindAlerter{}
 		game := poker.NewTexasHoldem(blindAlerter, store)
-		game.Start(7)
+		game.Start(7, ioutil.Discard)
 
 		cases := []scheduledAlert{
 			{0 * time.Minute, 100},
@@ -128,6 +130,6 @@ type SpyBlindAlerter struct {
 	alerts []scheduledAlert
 }
 
-func (alerter *SpyBlindAlerter) ScheduleAlertAt(scheduledAt time.Duration, amount int) {
+func (alerter *SpyBlindAlerter) ScheduleAlertAt(scheduledAt time.Duration, amount int, _ io.Writer) {
 	alerter.alerts = append(alerter.alerts, scheduledAlert{scheduledAt, amount})
 }

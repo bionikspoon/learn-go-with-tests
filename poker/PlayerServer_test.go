@@ -19,7 +19,7 @@ func TestPlayerServer(t *testing.T) {
 			{3, "Creed", 3},
 		},
 	}
-	server := poker.EnsurePlayerServer(t, store)
+	server := poker.EnsurePlayerServer(t, store, &poker.SpyGame{})
 
 	t.Run("show Joe Sixpack's score", func(t *testing.T) {
 		request := poker.FetchShowScoreRequest("Joe Sixpack")
@@ -93,7 +93,7 @@ func TestPlayerServer(t *testing.T) {
 
 func TestGame(t *testing.T) {
 	t.Run("GET /game returns 200", func(t *testing.T) {
-		server := poker.EnsurePlayerServer(t, &poker.StubPlayerStore{})
+		server := poker.EnsurePlayerServer(t, &poker.StubPlayerStore{}, &poker.SpyGame{})
 
 		request := poker.FetchGameRequest()
 		response := httptest.NewRecorder()
@@ -102,10 +102,14 @@ func TestGame(t *testing.T) {
 		poker.AssertStatus(t, response, http.StatusOK)
 	})
 
-	t.Run("WS /ws it receives the winner of the game", func(t *testing.T) {
+	t.Run("it prompts the user to enter number of players and starts the game", func(t *testing.T) {
 		winner := "Ruth"
+
+		game := &poker.SpyGame{}
 		store := &poker.StubPlayerStore{}
-		server := httptest.NewServer(poker.EnsurePlayerServer(t, store))
+		playerServer := poker.EnsurePlayerServer(t, store, game)
+		server := httptest.NewServer(playerServer)
+
 		defer server.Close()
 
 		wsUrl := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
@@ -113,14 +117,17 @@ func TestGame(t *testing.T) {
 		ws := poker.EnsureWSDial(t, wsUrl)
 		defer ws.Close()
 
+		poker.EnsureWSWriteMessage(t, ws, "3")
 		poker.EnsureWSWriteMessage(t, ws, winner)
 
-		want := []string{"RecordWin Ruth"}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 
-		if !reflect.DeepEqual(store.CalledWith, want) {
-			t.Errorf("got %#v want %#v", store.CalledWith, want)
+		if got := game.StartedWith; got != 3 {
+			t.Errorf("got %d want %d", got, 3)
 		}
 
+		if got := game.FinishedWith; got != winner {
+			t.Errorf("got %q want %q", got, winner)
+		}
 	})
 }

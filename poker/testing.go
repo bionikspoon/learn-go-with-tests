@@ -3,6 +3,7 @@ package poker
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -141,10 +142,10 @@ func CreateTempFile(t *testing.T, initialData string) (*os.File, func()) {
 	return tmpfile, removeFile
 }
 
-func EnsurePlayerServer(t *testing.T, store PlayerStore) *PlayerServer {
+func EnsurePlayerServer(t *testing.T, store PlayerStore, game Game) *PlayerServer {
 	t.Helper()
 
-	server, err := NewPlayerServer(store)
+	server, err := NewPlayerServer(store, game)
 	if err != nil {
 		t.Fatalf("could not ensure player server %v", err)
 	}
@@ -169,4 +170,18 @@ func EnsureWSWriteMessage(t *testing.T, ws *websocket.Conn, message string) {
 	if err := ws.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
 		t.Fatalf("could not send message over ws connection %v", err)
 	}
+}
+
+type SpyGame struct {
+	StartedWith  int
+	StartCalled  bool
+	FinishedWith string
+}
+
+func (game *SpyGame) Start(startedWith int, out io.Writer) {
+	game.StartedWith = startedWith
+	game.StartCalled = true
+}
+func (game *SpyGame) Finish(finishedWith string) {
+	game.FinishedWith = finishedWith
 }

@@ -13,37 +13,83 @@
     body {
       height: 100%;
     }
-    .form-play {
+    .mw-330 {
       max-width: 330px;
     }
   </style>
 </head>
 <body class="text-center d-flex align-items-center bg-light py-4">
-  <form id="winner" class="form-play w-100 p-3 m-auto">
+  <form id="start-game" class="mw-330 w-100 p-3 m-auto">
+    <h1 class="h3 mb-3 font-weight-normal">Let's play poker</h1>
+    <label for="players" class="sr-only">Number of players</label>
+    <input type="number" name="players" class="form-control p-2" placeholder="Number of players" min="0" required autofocus />
+
+    <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Start</button>
+    <p class="mt-5 mb-3 text-muted">&copy; {{ .Year }}</p>
+  </form>
+
+  <form id="declare-winner" class="mw-330 w-100 p-3 m-auto">
     <h1 class="h3 mb-3 font-weight-normal">Let's play poker</h1>
     <label for="winner" class="sr-only">Winner</label>
     <input type="text" name="winner" class="form-control p-2" placeholder="Winner" required autofocus />
 
     <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Declare Winner</button>
+    <p id="blind-value" class="p-3 mb-0 lead"></p>
     <p class="mt-5 mb-3 text-muted">&copy; {{ .Year }}</p>
   </form>
 
+  <div id="finish-game" class="mw-330 w-100 p-3 m-auto">
+    <h1 class="h3 mb-3 font-weight-normal">Another great game of poker everyone!</h1>
+    <p><a href="/league">Go check the league table</a></p>
+    <p class="mt-5 mb-3 text-muted">&copy; {{ .Year }}</p>
+  </div>
+
+
+
   <script>
-    let ws;
+    (function(){
+      if (!window.WebSocket) return
+      let ws = new WebSocket(`ws://${location.host}/ws`)
 
-    if(window.WebSocket) {
-      ws = new WebSocket(`ws://${location.host}/ws`)
-    }
+      const $startGameForm = document.getElementById("start-game")
+      const $declareWinnerForm = document.getElementById("declare-winner")
+      const $finishGame = document.getElementById("finish-game")
+      const $blindValue = document.getElementById("blind-value")
 
-    document.getElementById("winner").addEventListener("submit", function(event){
-      event.preventDefault();
+      $startGameForm.hidden = false
+      $declareWinnerForm.hidden = true
+      $finishGame.hidden = true
 
-      const data =  Object.fromEntries(new FormData(event.target).entries())
+      $startGameForm.addEventListener("submit", function (event) {
+        event.preventDefault();
 
-      if(ws) {
-        const result = ws.send(data.winner)
-      }
-    })
+        const data = Object.fromEntries(new FormData(event.target).entries())
+
+        $startGameForm.hidden = true
+        $declareWinnerForm.hidden = false
+        $finishGame.hidden = true
+        ws.send(data.players)
+      })
+
+      $declareWinnerForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const data = Object.fromEntries(new FormData(event.target).entries())
+
+        $startGameForm.hidden = true
+        $declareWinnerForm.hidden = true
+        $finishGame.hidden = false
+        ws.send(data.winner)
+      })
+
+      ws.addEventListener("close", function(event){
+        $blindValue.innerText = "Connection closed"
+      })
+
+      ws.addEventListener("message", function(event){
+        $blindValue.innerText = event.data
+      })
+    })()
   </script>
 </body>
 </html>
